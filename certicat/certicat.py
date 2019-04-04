@@ -13,6 +13,11 @@ from certicat.result import CerticatResult
 class Certicat(object):
     _simple_members = ["serial_number", "not_valid_before", "not_valid_after"]
     _tuple_members = [("issuer", "issuer_name"), ("subject", "subject_name")]
+    _excluded_extentions = [
+        x509.AuthorityKeyIdentifier,
+        x509.SubjectKeyIdentifier,
+        x509.PrecertificateSignedCertificateTimestamps,
+    ]
 
     def __init__(self, certificate):
         self._old_cert = certificate
@@ -59,15 +64,12 @@ class Certicat(object):
             )
 
         for extension in self._get_extensions():
-            if (
-                not isinstance(extension.value, x509.AuthorityKeyIdentifier)
-                and not isinstance(extension.value, x509.SubjectKeyIdentifier)
-                and not isinstance(
-                    extension.value,
-                    x509.PrecertificateSignedCertificateTimestamps,
-                )
+            if not any(
+                [
+                    isinstance(extension.value, excluded_ext)
+                    for excluded_ext in self._excluded_extentions
+                ]
             ):
-
                 self._builder = self._builder.add_extension(
                     extension.value, extension.critical
                 )
